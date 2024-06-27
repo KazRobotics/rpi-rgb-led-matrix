@@ -4,7 +4,7 @@ from libcpp cimport bool
 from libc.stdint cimport uint8_t, uint32_t, uintptr_t
 from PIL import Image
 import cython
-from cpython cimport PyBUF_WRITABLE
+from cpython cimport PyBUF_WRITABLE, Py_buffer, PyObject_GetBuffer, PyBuffer_Release
 
 cdef object init_key = object()
 
@@ -139,6 +139,14 @@ cdef class FrameCanvas(Canvas):
     cdef cppinc.Canvas* __getCanvas(self) except NULL:
         assert self.__canvas != NULL
         return self.__canvas
+
+    def load_framebuffer(self, data):
+        cdef Py_buffer buffer
+        if PyObject_GetBuffer(data, &buffer, 0) < 0:
+            raise ValueError
+        res = self.__canvas.Deserialize(<const char*>buffer.buf, buffer.len)
+        PyBuffer_Release(&buffer)
+        return res
 
     @property
     def framebuffer(self):
